@@ -20,34 +20,34 @@ public class UserController {
 
 	@Autowired
 	private UserRepository userRepository;
-	
+
 	@GetMapping("/loginForm")
-	public String loginForm(){
+	public String loginForm() {
 		return "/user/login";
 	}
-	
+
 	@PostMapping("/login")
-	public String login(String userId, String password, HttpSession session){
+	public String login(String userId, String password, HttpSession session) {
 		User user = userRepository.findByUserId(userId);
-		if(user == null){
+		if (user == null) {
 			System.out.println("login fail");
 			return "redirect:/users/loginForm";
 		}
-		
-		if(!password.equals(user.getPassword())){
+
+		if (!user.matchPassword(password)) {
 			System.out.println("login fail");
 			return "redirect:/users/loginForm";
 		}
-		
+
 		System.out.println("login success");
-		session.setAttribute("user", user);
-		
+		session.setAttribute(HttpSessionUtils.USER_SESSION_KEY, user);
+
 		return "redirect:/";
 	}
-	
+
 	@GetMapping("/logout")
-	public String logout(HttpSession session){
-		session.removeAttribute("user");
+	public String logout(HttpSession session) {
+		session.removeAttribute(HttpSessionUtils.USER_SESSION_KEY);
 		return "redirect:/";
 	}
 
@@ -70,16 +70,37 @@ public class UserController {
 	}
 
 	@GetMapping("{id}/form")
-	public String updateForm(@PathVariable Long id, Model model) {
+	public String updateForm(@PathVariable Long id, Model model, HttpSession session) {
+
+		if (!HttpSessionUtils.isLoginUser(session)) {
+			return "redirect:/users/loginForm";
+		}
+
+		User sessionedUser = HttpSessionUtils.getUserFromSession(session);
+
+		if (!sessionedUser.matchId(id)) {
+			throw new IllegalStateException("can't not modify");
+		}
+
+		// User user = userRepository.findOne(sessionedUser.getId());
 		User user = userRepository.findOne(id);
-		model.addAttribute("user", user );
+		model.addAttribute("user", user);
 		return "/user/updateForm";
 	}
-	
+
 	@PutMapping("/{id}")
-	public String update(@PathVariable Long id, User newUser){
+	public String update(@PathVariable Long id, User updatedUser, HttpSession session) {
+		if (!HttpSessionUtils.isLoginUser(session)) {
+			return "redirect:/users/loginForm";
+		}
+
+		User sessionedUser = HttpSessionUtils.getUserFromSession(session);
+		if (!sessionedUser.matchId(id)) {
+			throw new IllegalStateException("can't not modify");
+		}
+
 		User user = userRepository.findOne(id);
-		user.update(newUser);
+		user.update(updatedUser);
 		userRepository.save(user);
 		return "redirect:/users";
 	}
