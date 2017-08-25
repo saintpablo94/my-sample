@@ -50,7 +50,7 @@ public class Question {
 	}
 
 	public boolean isSameWriter(User loginUser) {
-
 		return this.writer.equals(loginUser);
 	}
+
 }
